@@ -1,0 +1,168 @@
+import re
+import pyfaidx
+from pyfaidx import Fasta
+import re
+
+## Scan both genomic DNA strands for potential open reading frames longer than 50 codons.
+
+# Bacterial genome downloaded
+
+genes = pyfaidx.Fasta("GCA_001307505.2_ASM130750v2_genomic.fna")
+genes
+records = list(genes.keys())
+records
+seq1 = genes[records[0]][:]
+
+# code to convert dna strand into compementary strand 
+def complement(seq):
+    complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'} 
+    bases = list(seq) 
+    bases = [complement[base] for base in bases] 
+    return ''.join(bases)
+    def reverse_complement(s):
+        return complement(s[::-1])
+
+    
+# bottom strand
+revcomseq1use = complement(seq1use)
+
+# pattern using regex to find open reading frames
+pattern = re.compile(r'(?=(ATG(?:...)*?)(?=TAG|TGA|TAA))')
+
+ORFs1 = set(pattern.findall(seq1use))
+
+ORFs2 = set(pattern.findall(revcomseq1use))
+
+ORFs150 = [x for x in ORFs1 if len(x) > 50]
+
+ORFs150
+
+ORFs250 = [x for x in ORFs2 if len(x) > 50]
+
+## Translate the potential open reading frames into protein sequences
+
+# code to translate the open reading frames into proteins
+def translate(seq):
+       
+    table = {
+        'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+        'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+        'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+        'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                 
+        'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+        'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+        'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+        'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+        'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+        'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+        'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+        'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+        'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+        'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+        'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+        'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W',
+    }
+    protein =""
+     
+    if len(seq)%3 == 0:
+        for i in range(0, len(seq), 3):
+            codon = seq[i:i + 3]
+            protein+= table[codon]
+            
+    return protein
+
+# convert all the strings of ORFs to potential proteins
+
+def MakeProteins(strings):
+    proteinlist = []
+    for i in strings:
+        protein = translate(i)
+        proteinlist += [protein]
+        
+    return proteinlist
+
+ProteinsORFs150 = MakeProteins(ORFs150)
+
+ProteinsORFs150
+
+ProteinsORFs250 = MakeProteins(ORFs250)
+
+ProteinsORFs250
+
+## Calculate the predicted molecular mass of each protein (in kD)
+
+def MolWeight(seq):
+    weights = {'A': 71.04, 'C': 103.01, 'D': 115.03, 'E': 129.04, 'F': 147.07,
+       'G': 57.02, 'H': 137.06, 'I': 113.08, 'K': 128.09, 'L': 113.08,
+       'M': 131.04, 'N': 114.04, 'P': 97.05, 'Q': 128.06, 'R': 156.10,
+       'S': 87.03, 'T': 101.05, 'V': 99.07, 'W': 186.08, 'Y': 163.06 }
+
+
+
+    proteinweight = 0
+    seq = 'MFAISLFFTNAIIKFFIIITIWKFI'
+         
+    
+    for aa in seq:
+        proteinweight =+ weights[aa]
+        
+        return proteinweight
+
+oneprotein = MolWeight("MYHFKVEMLQMFKMFLMHTLKY")
+
+oneprotein
+
+def AllProteinWeights(listofproteins):
+    
+    for i in listofproteins:
+        proteinweightlist = []
+   
+        protein = MolWeight(i)
+        proteinweightlist += [protein]
+        
+    return proteinweightlist
+
+DictofORFs150 = AllProteinWeights(ProteinsORFs150)
+
+DictofORFs150
+
+DictofORFs250 = AllProteinWeights(ProteinsORFs250)
+
+DictofORFs250
+
+## Blast five protein coding sequences 
+
+## Protein 1
+##### AAA family ATPase ['Echinacea purpurea' witches'-broom phytoplasma]
+##### AAA family ATPase ['Parthenium sp.' phyllody phytoplasma]
+##### AAA family ATPase [Peanut witches'-broom phytoplasma]
+##### AAA family ATPase [Sweet potato little leaf phytoplasma]
+##### AAA family ATPase [Candidatus Phytoplasma australasia]
+
+## Protein 2
+##### excinuclease ABC subunit A ['Echinacea purpurea' witches'-broom phytoplasma]
+##### excinuclease ABC subunit UvrA [Peanut witches'-broom phytoplasma]
+##### excinuclease ABC subunit UvrA [Sweet potato little leaf phytoplasma]
+##### excinuclease ABC subunit UvrA [Candidatus Phytoplasma]
+##### excinuclease ABC subunit UvrA [Candidatus Phytoplasma australasia]
+
+## Protein 3
+##### phenylalanine--tRNA ligase subunit beta [Peanut witches'-broom phytoplasma]
+##### phenylalanine--tRNA ligase subunit beta [Sweet potato little leaf phytoplasma]
+##### phenylalanine--tRNA ligase subunit beta [Candidatus Phytoplasma]
+##### phenylalanine--tRNA ligase subunit beta [Candidatus Phytoplasma aurantifolia]
+##### phenylalanine--tRNA ligase subunit beta ['Parthenium hysterophorus' phyllody phytoplasma]
+
+## Protein 4
+##### tRNA (guanosine(37)-N1)-methyltransferase TrmD [Candidatus Phytoplasma]
+##### tRNA (guanosine(37)-N1)-methyltransferase TrmD [Candidatus Phytoplasma aurantifolia]
+##### tRNA (guanosine(37)-N1)-methyltransferase TrmD ['Parthenium hysterophorus' phyllody phytoplasma]
+##### tRNA (guanosine(37)-N1)-methyltransferase TrmD [Candidatus Phytoplasma sp. AldY-WA1]
+##### tRNA (guanosine(37)-N1)-methyltransferase TrmD [Candidatus Phytoplasma vitis]
+
+## Protein 5
+##### preprotein translocase subunit SecA [Peanut witches'-broom phytoplasma NTU2011]
+##### preprotein translocase subunit SecA [Peanut witches'-broom phytoplasma]
+##### preprotein translocase subunit SecA [Sweet potato little leaf phytoplasma]
+##### preprotein translocase subunit SecA ['Parthenium sp.' phyllody phytoplasma]
+##### preprotein translocase subunit SecA [16SrII (Peanut WB group)]
